@@ -1,7 +1,8 @@
-// parse.js — a fast Markdown renderer whose parse(markdown) returns exactly the HTML
-// that marked 18.1.3 returns with its default options (GFM on), for less CPU time.
-// Dependency-free: a hand-written block scanner plus an inline scanner with a
-// delimiter-stack emphasis pass. No state is kept between calls.
+// parse.js — a fast Markdown renderer whose parse(markdown) returns exactly
+// the HTML that marked 18.1.3 returns with its default options (GFM on),
+// for less CPU time. Dependency-free: a hand-written block scanner plus an
+// inline scanner with a delimiter-stack emphasis pass. parse() keeps no
+// state between calls — every call renders its input from scratch.
 
 // ---------- small helpers ----------
 
@@ -86,6 +87,11 @@ function cleanUrl(href) {
 /** Normalize a link label the way marked does for definition lookup. */
 function normLabel(s) {
   return s.replace(/\s+/g, ' ').trim().toLowerCase().replace(/ß/g, 'ss');
+}
+
+/** Resolve backslash escapes of ASCII punctuation (marked's unescape rule). */
+function unescapeBackslash(s) {
+  return s.replace(/\\([!"#$%&'()*+,\-.\/:;<=>?@[\\\]^_`{|}~])/g, '$1');
 }
 
 // ---------- block level ----------
@@ -1097,7 +1103,7 @@ function parseInline(s, defs, inLink, spec = false) {
       const nm = RE_ENT_DEC.exec(s) || RE_ENT_HEX.exec(s);
       if (nm) {
         const val = nm[0][2] === 'x' || nm[0][2] === 'X' ? parseInt(nm[1], 16) : parseInt(nm[1], 10);
-        const ch = (val === 0 || val > 0x10FFFF || (val >= 0xD800 && val <= 0xDFFF)) ? '\uFFFD' : String.fromCodePoint(val);
+        const ch = (val === 0 || val > 0x10FFFF || (val >= 0xD800 && val <= 0xDFFF)) ? '�' : String.fromCodePoint(val);
         flush();
         nodes.push({ t: 'text', s: ch, esc: true });
         i += nm[0].length;
@@ -1421,10 +1427,6 @@ function renderNodes(nodes) {
     }
   }
   return out;
-}
-
-function unescapeBackslash(s) {
-  return s.replace(/\\([!"#$%&'()*+,\-.\/:;<=>?@[\\\]^_`{|}~])/g, '$1');
 }
 
 function inlineHtml(text, defs) {
